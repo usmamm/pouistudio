@@ -277,7 +277,9 @@
       position: relative;
       border-left: 6px solid var(--primary);
       cursor: grab;
-      transition: 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+      resize: both;
+      overflow: hidden;
     }
 
     .rendered-element.dragging {
@@ -945,10 +947,17 @@
       const pkgTag = cpDef.pkg === 'ng-templates' ? ' tag-ai' : '';
       div.className = `rendered-element ${item.isContainer ? 'is-container' : ''} ${item.isLogic ? 'is-logic' : ''} ${selectedId === item.id ? 'selected' : ''}`;
       div.draggable = true;
+      if (item.styleWidth) div.style.width = item.styleWidth;
+      if (item.styleHeight) div.style.height = item.styleHeight;
 
       let prefix = item.isLogic ? '⚙️ ' : '';
       div.innerHTML = `<button class="remove-btn" onclick="removeEl('${item.id}', event)">✕</button>
                        <div class="mock-title">${prefix}${escapeHtml(item.label)} <span style="font-weight:400; text-transform:none; font-size:10px; color:#94a3b8;">(${escapeHtml(item.tag)})</span></div>`;
+
+      div.addEventListener('mouseup', (e) => {
+        if (div.style.width && div.style.width !== item.styleWidth) item.styleWidth = div.style.width;
+        if (div.style.height && div.style.height !== item.styleHeight) item.styleHeight = div.style.height;
+      });
 
       div.addEventListener('dragstart', (e) => { e.stopPropagation(); draggedId = item.id; div.classList.add('dragging'); });
       div.addEventListener('dragend', () => { div.classList.remove('dragging'); render(); });
@@ -1146,7 +1155,12 @@
           let h = '';
           const indent = '  '.repeat(indentLevel);
           project.filter(p => p.parentId === pId && !p.isLogic).forEach(el => {
-            const attrs = buildElAttrs(el);
+            let attrs = buildElAttrs(el);
+            let inlineStyles = [];
+            if (el.styleWidth) inlineStyles.push(`width: ${el.styleWidth}`);
+            if (el.styleHeight) inlineStyles.push(`height: ${el.styleHeight}`);
+            if (inlineStyles.length > 0) attrs += ` style="${inlineStyles.join('; ')}"`;
+            
             if (el.isContainer) {
               h += `${indent}<${el.tag}${attrs}>\n${getHTML(el.id, indentLevel + 1)}${indent}</${el.tag}>\n`;
             } else if (el.tag === 'po-divider' && !el.label) {
